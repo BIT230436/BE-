@@ -92,9 +92,14 @@ public class AttendanceController {
             @RequestParam Long userId,
             @RequestParam String date
     ) {
-        LocalDate queryDate = LocalDate.parse(date);
-        AttendanceRecordDTO record = attendanceService.getTodayAttendance(userId, queryDate);
-        return ResponseEntity.ok(ResponseWrapper.success(record, "Lấy thông tin thành công"));
+        try {
+            LocalDate queryDate = LocalDate.parse(date);
+            AttendanceRecordDTO record = attendanceService.getTodayAttendance(userId, queryDate);
+            return ResponseEntity.ok(ResponseWrapper.success(record, "Lấy thông tin thành công"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ResponseWrapper.error(e.getMessage()));
+        }
     }
 
     // 8️⃣ API lấy lịch sử chấm công (có phân trang)
@@ -104,8 +109,13 @@ public class AttendanceController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        AttendanceHistoryDTO history = attendanceService.getAttendanceHistory(userId, page, size);
-        return ResponseEntity.ok(ResponseWrapper.success(history.getData(), "Lấy lịch sử thành công"));
+        try {
+            AttendanceHistoryDTO history = attendanceService.getAttendanceHistory(userId, page, size);
+            return ResponseEntity.ok(ResponseWrapper.success(history.getData(), "Lấy lịch sử thành công"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ResponseWrapper.error(e.getMessage()));
+        }
     }
 
     // 9️⃣ API lấy báo cáo chuyên cần (cho HR/Admin)

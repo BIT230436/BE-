@@ -47,12 +47,19 @@ public class AuthController {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        var permissions = user.getRole()
+                .getPermissions()
+                .stream()
+                .map(p -> p.getName())
+                .toList();
+
         return ResponseEntity.ok(Map.of(
                 "id", user.getId(),
                 "email", user.getEmail(),
                 "username", user.getUsername(),
                 "fullName", user.getFullName(),
-                "role", user.getRole().getName()));
+                "role", user.getRole().getName(),
+                "permissions", permissions));
     }
 
     @GetMapping("/oauth2-login")

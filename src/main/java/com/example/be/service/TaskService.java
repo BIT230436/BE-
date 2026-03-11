@@ -88,7 +88,12 @@ public class TaskService {
     // ✅ Lấy task của user hiện tại
     public Map<String, Object> getMyTasks(Long userId) {
         try {
-            Long internId = getInternIdByUserId(userId);
+            Long internId;
+            try {
+                internId = getInternIdByUserId(userId);
+            } catch (Exception e) {
+                return Map.of("success", true, "data", new ArrayList<>());
+            }
             return getTasksByIntern(internId);
         } catch (Exception e) {
             e.printStackTrace();

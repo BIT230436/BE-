@@ -387,8 +387,15 @@ public class AllowanceService {
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy user với email: " + email));
 
-            InternProfile intern = internProfileRepository.findByUser_Id(user.getId())
-                    .orElseThrow(() -> new RuntimeException("Bạn không phải là thực tập sinh"));
+            Optional<InternProfile> internOpt = internProfileRepository.findByUser_Id(user.getId());
+            if (internOpt.isEmpty()) {
+                Map<String, Object> emptySummary = new HashMap<>();
+                emptySummary.put("totalReceived", 0.0);
+                emptySummary.put("totalRecords", 0);
+                emptySummary.put("internName", "");
+                return Map.of("success", true, "data", new ArrayList<>(), "summary", emptySummary);
+            }
+            InternProfile intern = internOpt.get();
 
             List<AllowancePayment> allowances = allowanceRepository.findByIntern_Id(intern.getId());
 

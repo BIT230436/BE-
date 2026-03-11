@@ -288,7 +288,7 @@ public class ReportService {
     public List<EvaluationResponse> getAllEvaluationsByUserId(Long userId) {
         Long internId = internContextService.getInternIdFromUserId(userId);
         if (internId == null) {
-            throw new RuntimeException("Không tìm thấy intern cho userId = " + userId);
+            return new java.util.ArrayList<>();
         }
 
         List<Evaluation> evaluations = evaluationRepository.findByIntern_Id(internId);
@@ -300,7 +300,7 @@ public class ReportService {
     public List<ReportResponse> getAllReportsByUserId(Long userId) {
         Long internId = internContextService.getInternIdFromUserId(userId);
         if (internId == null) {
-            throw new RuntimeException("Không tìm thấy intern cho userId = " + userId);
+            return new java.util.ArrayList<>();
         }
 
         List<Report> reports = reportRepository.findByIntern_Id(internId);

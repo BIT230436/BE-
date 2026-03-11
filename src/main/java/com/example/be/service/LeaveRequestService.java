@@ -64,9 +64,12 @@ public class LeaveRequestService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy user với email: " + email));
 
-        // Bước 2: Tìm InternProfile của user này
-        InternProfile intern = internProfileRepository.findByUser_Id(user.getId())
-                .orElseThrow(() -> new RuntimeException("Bạn không phải là thực tập sinh"));
+        // Bước 2: Tìm InternProfile của user này - trả về empty list nếu chưa có hồ sơ
+        java.util.Optional<InternProfile> internOpt = internProfileRepository.findByUser_Id(user.getId());
+        if (internOpt.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+        InternProfile intern = internOpt.get();
 
         // Bước 3: CRITICAL - Chỉ lấy đơn của intern này
         List<LeaveRequest> requests = leaveRequestRepository.findByIntern_Id(intern.getId());
