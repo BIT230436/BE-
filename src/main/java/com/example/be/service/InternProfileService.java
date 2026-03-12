@@ -99,21 +99,33 @@ public class InternProfileService {
             // ✅ SỬA: Tự động phân nhóm với giới hạn 8 người
             Integer programId = getOrCreateProgramWithLimit(request);
 
+            // ✅ Tự động link user_id nếu user có cùng email đã tồn tại trong bảng users
+            String email = ((String) request.get("studentEmail")).trim();
+            Long linkedUserId = null;
+            try {
+                List<Map<String, Object>> userResult = jdbcTemplate.queryForList(
+                        "SELECT user_id FROM users WHERE email = ? LIMIT 1", email);
+                if (!userResult.isEmpty()) {
+                    linkedUserId = ((Number) userResult.get(0).get("user_id")).longValue();
+                }
+            } catch (Exception ignored) {}
+
             String insertSql = """
                     INSERT INTO intern_profiles 
-                    (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', 0)
+                    (fullname, email, uni_id, major_id, program_id, available_from, end_date, status, phone, year_of_study, user_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', 0, ?)
                     """;
 
             jdbcTemplate.update(insertSql,
                     ((String) request.get("student")).trim(),
-                    ((String) request.get("studentEmail")).trim(),
+                    email,
                     uniId,
                     majorId,
                     programId,
                     request.get("startDate"),
                     request.get("endDate"),
-                    request.getOrDefault("status", "active")
+                    request.getOrDefault("status", "active"),
+                    linkedUserId
             );
 
             return Map.of(
@@ -258,7 +270,7 @@ public class InternProfileService {
 
     /**
      * ✅ PHƯƠNG THỨC MỚI: Tự động phân nhóm với giới hạn 8 người
-     * - Tìm các program có cùng title
+     * - Tìm các program có cùng title (ưu tiên program của mentor nếu có mentorUserId)
      * - Kiểm tra số lượng thành viên trong mỗi program
      * - Nếu program chưa đủ 8 người -> dùng program đó
      * - Nếu tất cả program đều đủ 8 người -> tạo program mới
@@ -269,23 +281,49 @@ public class InternProfileService {
             return null;
         }
 
-        // Tìm tất cả các program có cùng title
-        String findProgramsSql = """
-                SELECT p.program_id, COUNT(ip.intern_id) as member_count
-                FROM intern_programs p
-                LEFT JOIN intern_profiles ip ON p.program_id = ip.program_id
-                WHERE p.title = ?
-                GROUP BY p.program_id
-                HAVING COUNT(ip.intern_id) < ?
-                ORDER BY p.program_id ASC
-                LIMIT 1
-                """;
+        // ✅ Lấy mentorId nếu có mentorUserId trong request
+        Integer mentorId = null;
+        Object mentorUserIdObj = request.get("mentorUserId");
+        if (mentorUserIdObj != null) {
+            try {
+                Long mentorUserId = ((Number) mentorUserIdObj).longValue();
+                List<Map<String, Object>> mentorResult = jdbcTemplate.queryForList(
+                        "SELECT mentor_id FROM mentors WHERE user_id = ?", mentorUserId);
+                if (!mentorResult.isEmpty()) {
+                    mentorId = ((Number) mentorResult.get(0).get("mentor_id")).intValue();
+                }
+            } catch (Exception ignored) {}
+        }
 
-        List<Map<String, Object>> availablePrograms = jdbcTemplate.queryForList(
-                findProgramsSql,
-                title.trim(),
-                MAX_GROUP_SIZE
-        );
+        // ✅ Tìm program có cùng title, ưu tiên program của mentor nếu có
+        List<Map<String, Object>> availablePrograms;
+        if (mentorId != null) {
+            String findMentorProgramsSql = """
+                    SELECT p.program_id, COUNT(ip.intern_id) as member_count
+                    FROM intern_programs p
+                    LEFT JOIN intern_profiles ip ON p.program_id = ip.program_id
+                    WHERE p.title = ? AND p.mentor_id = ?
+                    GROUP BY p.program_id
+                    HAVING COUNT(ip.intern_id) < ?
+                    ORDER BY p.program_id ASC
+                    LIMIT 1
+                    """;
+            availablePrograms = jdbcTemplate.queryForList(
+                    findMentorProgramsSql, title.trim(), mentorId, MAX_GROUP_SIZE);
+        } else {
+            String findProgramsSql = """
+                    SELECT p.program_id, COUNT(ip.intern_id) as member_count
+                    FROM intern_programs p
+                    LEFT JOIN intern_profiles ip ON p.program_id = ip.program_id
+                    WHERE p.title = ?
+                    GROUP BY p.program_id
+                    HAVING COUNT(ip.intern_id) < ?
+                    ORDER BY p.program_id ASC
+                    LIMIT 1
+                    """;
+            availablePrograms = jdbcTemplate.queryForList(
+                    findProgramsSql, title.trim(), MAX_GROUP_SIZE);
+        }
 
         // Nếu có program chưa đầy -> dùng program đó
         if (!availablePrograms.isEmpty()) {
@@ -293,10 +331,11 @@ public class InternProfileService {
         }
 
         // Nếu tất cả program đều đầy -> tạo program mới
+        final Integer finalMentorId = mentorId;
         KeyHolder programKeyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO intern_programs (title, description, capacity, start_date, end_date) VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO intern_programs (title, description, capacity, start_date, end_date, mentor_id) VALUES (?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS
             );
             ps.setString(1, title.trim());
@@ -304,6 +343,11 @@ public class InternProfileService {
             ps.setInt(3, MAX_GROUP_SIZE);
             ps.setString(4, (String) request.get("startDate"));
             ps.setString(5, (String) request.get("endDate"));
+            if (finalMentorId != null) {
+                ps.setInt(6, finalMentorId);
+            } else {
+                ps.setNull(6, java.sql.Types.INTEGER);
+            }
             return ps;
         }, programKeyHolder);
 

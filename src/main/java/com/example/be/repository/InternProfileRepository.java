@@ -10,7 +10,9 @@ import java.util.Optional;
 
 public interface InternProfileRepository extends JpaRepository<InternProfile, Long> {
 
-    Optional<InternProfile> findByUser_Id(Long internId);
+    Optional<InternProfile> findByUser_Id(Long userId);
+
+    Optional<InternProfile> findByEmail(String email);
 
     List<InternProfile> findByProgram_Id(Long programId);
 

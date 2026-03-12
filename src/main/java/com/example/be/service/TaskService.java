@@ -23,17 +23,37 @@ public class TaskService {
     private final JdbcTemplate jdbcTemplate;
     private final NotificationPublisher notificationPublisher;
 
-    // ✅ Lấy intern_id từ user_id
+    // ✅ Lấy intern_id từ user_id (có fallback theo email)
     public Long getInternIdByUserId(Long userId) {
         try {
+            // 1. Thử trực tiếp qua user_id
             String sql = "SELECT intern_id FROM intern_profiles WHERE user_id = ?";
             List<Map<String, Object>> result = jdbcTemplate.queryForList(sql, userId);
 
-            if (result.isEmpty()) {
-                throw new RuntimeException("Không tìm thấy thông tin thực tập sinh với user_id: " + userId);
+            if (!result.isEmpty()) {
+                return ((Number) result.get(0).get("intern_id")).longValue();
             }
 
-            return ((Number) result.get(0).get("intern_id")).longValue();
+            // 2. Fallback: tìm theo email của user
+            List<Map<String, Object>> emailResult = jdbcTemplate.queryForList(
+                    "SELECT email FROM users WHERE user_id = ?", userId);
+            if (emailResult.isEmpty()) {
+                throw new RuntimeException("Không tìm thấy thông tin thực tập sinh với user_id: " + userId);
+            }
+            String email = (String) emailResult.get(0).get("email");
+            List<Map<String, Object>> profileResult = jdbcTemplate.queryForList(
+                    "SELECT intern_id FROM intern_profiles WHERE email = ?", email);
+            if (profileResult.isEmpty()) {
+                throw new RuntimeException("Không tìm thấy thông tin thực tập sinh với user_id: " + userId);
+            }
+            Long internId = ((Number) profileResult.get(0).get("intern_id")).longValue();
+            // Cập nhật user_id để các lần sau không cần fallback
+            try {
+                jdbcTemplate.update("UPDATE intern_profiles SET user_id = ? WHERE intern_id = ?", userId, internId);
+            } catch (Exception ignored) {}
+            return internId;
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Lỗi khi tìm intern_id: " + e.getMessage());
         }
