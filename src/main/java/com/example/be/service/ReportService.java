@@ -50,24 +50,9 @@ public class ReportService {
     public List<EvaluationResponse> getEvaluationsByInternId(Long internId) {
         List<Evaluation> evaluations = evaluationRepository.findByIntern_Id(internId);
 
-        return evaluations.stream().map(e -> EvaluationResponse.builder()
-                .evaluationId(e.getEvaluationId())
-                .internId(e.getIntern().getId())
-                .internName(e.getIntern().getFullName())
-                .comment(e.getComment())
-                .cycle(e.getCycle())
-                .periodNo(e.getPeriodNo())
-                .scores(e.getScores() != null
-                        ? e.getScores().stream()
-                        .map(s -> new EvaluationScoreResponse(
-                                s.getCriteriaName(),
-                                s.getScore(),
-                                s.getComment()
-                        ))
-                        .toList()
-                        : null)
-                .build()
-        ).toList();
+        return evaluations.stream()
+            .map(EvaluationResponse::fromEntity)
+            .toList();
     }
 
     // ============================================================

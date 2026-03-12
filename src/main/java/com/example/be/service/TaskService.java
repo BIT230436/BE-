@@ -20,6 +20,7 @@ public class TaskService {
     private final InternScheduleRepository scheduleRepository;
     private final InternProfileRepository internProfileRepository;
     private final MentorRepository mentorRepository;
+    private final MentorContextService mentorContextService;
     private final JdbcTemplate jdbcTemplate;
     private final NotificationPublisher notificationPublisher;
 
@@ -173,8 +174,7 @@ public class TaskService {
     // ✅ Lấy danh sách tasks đã giao (cho mentor)
     public Map<String, Object> getAssignedTasks(Long mentorUserId) {
         try {
-            Mentors mentor = mentorRepository.findByUser_Id(mentorUserId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin mentor"));
+            Mentors mentor = resolveMentorByUserId(mentorUserId);
 
             String sql = """
                     SELECT 
@@ -220,6 +220,16 @@ public class TaskService {
         }
     }
 
+    private Mentors resolveMentorByUserId(Long mentorUserId) {
+        Long mentorId = mentorContextService.getMentorIdFromUserId(mentorUserId);
+        if (mentorId == null) {
+            throw new RuntimeException("Không tìm thấy thông tin mentor");
+        }
+
+        return mentorRepository.findById(mentorId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin mentor"));
+    }
+
     // ✅ Kiểm tra mentor có quyền giao task cho intern không
     private boolean canMentorAssignToIntern(Long mentorId, Long internId) {
         String sql = """
@@ -252,8 +262,7 @@ public class TaskService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy thực tập sinh"));
 
             // ✅ Lấy mentor theo user_id
-            Mentors mentor = mentorRepository.findByUser_Id(mentorUserId)
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy thông tin mentor với user_id: " + mentorUserId));
+                Mentors mentor = resolveMentorByUserId(mentorUserId);
 
             // ✅ KIỂM TRA QUYỀN: Mentor chỉ được giao task cho intern thuộc program mình quản lý
             if (!canMentorAssignToIntern(mentor.getId(), internId)) {

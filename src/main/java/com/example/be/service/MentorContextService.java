@@ -25,8 +25,26 @@ public class MentorContextService {
 
         // Tìm mentor tương ứng với user
         return mentorRepository.findByUser_Id(userId)
+            .map(Mentors::getId)
+            .orElseGet(() -> createMissingMentorProfile(user).getId());
+        }
 
-                .map(Mentors::getId)
-                .orElse(null);
+        private Mentors createMissingMentorProfile(User user) {
+        if (user.getRole() == null || user.getRole().getName() == null) {
+            throw new RuntimeException("User chưa có role để xác định mentor profile");
+        }
+
+        if (!"MENTOR".equalsIgnoreCase(user.getRole().getName())) {
+            throw new RuntimeException("User không phải mentor: " + user.getId());
+        }
+
+        Mentors mentor = Mentors.builder()
+            .user(user)
+            .fullName(user.getFullName() != null && !user.getFullName().isBlank()
+                ? user.getFullName()
+                : user.getEmail())
+            .build();
+
+        return mentorRepository.save(mentor);
     }
 }

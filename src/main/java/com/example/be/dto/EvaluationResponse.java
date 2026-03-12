@@ -30,17 +30,19 @@ public class EvaluationResponse {
                 .evaluationId(e.getEvaluationId())
                 .internId(e.getIntern().getId())
                 .internName(e.getIntern().getFullName())
-                .mentorName(e.getMentorEvaluator().getFullName())
+                .mentorName(e.getMentorEvaluator() != null ? e.getMentorEvaluator().getFullName() : null)
                 .cycle(e.getCycle())
                 .comment(e.getComment())
                 .periodNo(e.getPeriodNo())
                 .createdAt(e.getCreatedAt())
-                .scores(e.getScores().stream()
+                .scores(e.getScores() != null
+                        ? e.getScores().stream()
                         .map(s -> new EvaluationScoreResponse(
                                 s.getCriteriaName(),
                                 s.getScore(),
                                 s.getComment()))
-                        .collect(Collectors.toList()))
+                        .collect(Collectors.toList())
+                        : List.of())
                 .build();
     }
 

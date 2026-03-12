@@ -31,10 +31,30 @@ public class ProgramService {
     }
 
     public Program createProgram(Program program, Long userId) {
+        if (program.getProgramName() == null || program.getProgramName().trim().isEmpty()) {
+            throw new RuntimeException("Tên chương trình không được để trống!");
+        }
+
+        if (program.getDateCreate() == null) {
+            throw new RuntimeException("Ngày bắt đầu không được để trống!");
+        }
+
+        if (program.getDateEnd() == null) {
+            throw new RuntimeException("Ngày kết thúc không được để trống!");
+        }
+
+        if (program.getDateEnd().before(program.getDateCreate())) {
+            throw new RuntimeException("Ngày kết thúc phải sau ngày bắt đầu!");
+        }
+
         Long hrId = hrContextService.getHrIdFromUserId(userId);
         Hr hr = hrRepository.findById(hrId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy HR với id = " + hrId));
 
+        program.setProgramName(program.getProgramName().trim());
+        if (program.getDescription() != null) {
+            program.setDescription(program.getDescription().trim());
+        }
         program.setHr(hr);
 
         if (program.getUploadedAt() == null) {

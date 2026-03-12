@@ -42,6 +42,7 @@ public class ProjectService {
                 .map(intern -> InternRequest.builder()
                         .id(intern.getId())
                         .fullName(intern.getFullName())
+                .email(intern.getEmail())
                         .build())
                 .collect(Collectors.toList());
 
@@ -177,6 +178,7 @@ public class ProjectService {
                 .map(i -> InternRequest.builder()
                         .id(i.getId())
                         .fullName(i.getFullName())
+                .email(i.getEmail())
                         .build())
                 .collect(Collectors.toList());
 

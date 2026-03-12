@@ -14,6 +14,7 @@ import java.util.*;
 public class InternProfileController {
 
     private final InternProfileService internProfileService;
+    private final com.example.be.service.MentorContextService mentorContextService;
 
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
@@ -49,18 +50,7 @@ public class InternProfileController {
     // ✅ NEW METHOD: Lấy intern theo mentor
     private Map<String, Object> getInternsByMentor(Long mentorUserId, String query, String status, int page, int size) {
         try {
-            // Bước 1: Tìm mentor_id từ user_id
-            String findMentorSql = "SELECT mentor_id FROM mentors WHERE user_id = ?";
-            List<Map<String, Object>> mentorResult = jdbcTemplate.queryForList(findMentorSql, mentorUserId);
-
-            if (mentorResult.isEmpty()) {
-                return Map.of(
-                        "success", false,
-                        "message", "Không tìm thấy thông tin mentor"
-                );
-            }
-
-            Long mentorId = ((Number) mentorResult.get(0).get("mentor_id")).longValue();
+            Long mentorId = mentorContextService.getMentorIdFromUserId(mentorUserId);
 
             // Bước 2: Query intern thuộc program của mentor
             String sql = """
@@ -137,7 +127,9 @@ public class InternProfileController {
                     "success", true,
                     "data", formattedInterns,
                     "total", formattedInterns.size(),
-                    "message", "Danh sách thực tập sinh trong các program bạn quản lý"
+                    "message", formattedInterns.isEmpty()
+                        ? "Chưa có thực tập sinh nào thuộc mentor này"
+                        : "Danh sách thực tập sinh trong các program bạn quản lý"
             );
 
         } catch (Exception e) {

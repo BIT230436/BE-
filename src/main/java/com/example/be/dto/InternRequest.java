@@ -10,4 +10,5 @@ import lombok.*;
 public class InternRequest {
     private Long id;
     private String fullName;
+    private String email;
 }
