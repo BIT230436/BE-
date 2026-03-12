@@ -48,13 +48,12 @@ public class StatisticsService {
     public List<Map<String, Object>> getProgramCompletionStats(Long programId, Long mentorId, String major) {
         StringBuilder sql = new StringBuilder("""
                 SELECT 
-                    COALESCE(p.program_name, 'Chưa có chương trình') as programName,
+                    COALESCE(prog.title, 'Chưa có chương trình') as programName,
                     COUNT(ip.intern_id) as total,
                     SUM(CASE WHEN ip.status = 'COMPLETED' THEN 1 ELSE 0 END) as completed,
                     SUM(CASE WHEN ip.status = 'IN_PROGRESS' OR ip.status = 'active' THEN 1 ELSE 0 END) as inProgress,
                     SUM(CASE WHEN ip.status IS NULL OR ip.status NOT IN ('COMPLETED', 'IN_PROGRESS', 'active') THEN 1 ELSE 0 END) as notStarted
                 FROM intern_profiles ip
-                LEFT JOIN programs p ON ip.program_id = p.program_id
                 LEFT JOIN intern_programs prog ON ip.program_id = prog.program_id
                 WHERE 1=1
                 """);
@@ -76,7 +75,7 @@ public class StatisticsService {
             params.add(Integer.parseInt(major));
         }
 
-        sql.append(" GROUP BY p.program_name ORDER BY total DESC");
+        sql.append(" GROUP BY prog.title ORDER BY total DESC");
 
         List<Map<String, Object>> results = jdbcTemplate.queryForList(sql.toString(), params.toArray());
 
@@ -159,10 +158,10 @@ public class StatisticsService {
      */
     public List<Map<String, Object>> getAllPrograms() {
         String sql = """
-                SELECT DISTINCT p.program_id as id, p.program_name as name
-                FROM programs p
-                WHERE p.program_name IS NOT NULL
-                ORDER BY p.program_name
+                SELECT DISTINCT prog.program_id as id, prog.title as name
+                FROM intern_programs prog
+                WHERE prog.title IS NOT NULL
+                ORDER BY prog.title
                 """;
 
         return jdbcTemplate.queryForList(sql);

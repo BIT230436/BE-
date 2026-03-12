@@ -118,10 +118,12 @@ public class InternProfileController {
                 formatted.put("email", intern.get("email"));
                 formatted.put("phone", intern.get("phone"));
                 formatted.put("status", intern.get("status"));
+                formatted.put("startDate", intern.get("available_from")); // ✅ Fix: frontend dùng startDate
                 formatted.put("availableFrom", intern.get("available_from"));
                 formatted.put("endDate", intern.get("end_date"));
                 formatted.put("dob", intern.get("dob"));
                 formatted.put("yearOfStudy", intern.get("year_of_study"));
+                formatted.put("title", intern.get("program_name")); // ✅ Fix: frontend dùng title cho vị trí
                 formatted.put("programName", intern.get("program_name"));
                 formatted.put("programId", intern.get("program_id"));
                 formatted.put("universityName", intern.get("university_name"));

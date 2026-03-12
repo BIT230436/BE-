@@ -29,11 +29,12 @@ public class InternProfileService {
                            u.name_uni as school, ip.major_id, ip.year_of_study,
                            ip.phone, ip.available_from as startDate, ip.end_date as endDate,
                            p.title, ip.status, ip.program_id,
-                           mentor.fullname as mentor_name, p.mentor_id
+                           mentor_user.fullname as mentor_name, p.mentor_id
                     FROM intern_profiles ip
                     LEFT JOIN universities u ON ip.uni_id = u.uni_id
                     LEFT JOIN intern_programs p ON ip.program_id = p.program_id
-                    LEFT JOIN users mentor ON p.mentor_id = mentor.user_id
+                    LEFT JOIN mentors mt ON p.mentor_id = mt.mentor_id
+                    LEFT JOIN users mentor_user ON mt.user_id = mentor_user.user_id
                     WHERE 1=1
                     """);
 
@@ -70,6 +71,8 @@ public class InternProfileService {
             profiles.forEach(p -> {
                 Object majorId = p.get("major_id");
                 p.put("major", getMajorName(majorId));
+                // ✅ Fix: frontend dùng mentorName (camelCase)
+                p.put("mentorName", p.get("mentor_name"));
             });
 
             int total = getTotalProfileCount(query, school, major, status);
